@@ -20,6 +20,7 @@ namespace Housing
             builder.Services.AddScoped<Services.Helper>();
             builder.Services.AddScoped<Services.Interfaces.IJwtTokenService, Services.JwtTokenService>();
             builder.Services.AddScoped<Services.Interfaces.IAuthService, Services.AuthService>();
+            builder.Services.AddScoped<Services.Interfaces.IGeneralService, Services.GeneralService>();
 
             //JWT Konfiguratsiyasi
             builder.Services.AddAuthentication(options =>
