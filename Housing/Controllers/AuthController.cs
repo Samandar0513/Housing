@@ -1,0 +1,38 @@
+using Housing.Models.DTOs;
+using Housing.Services.Interfaces;
+using Microsoft.AspNetCore.Mvc;
+
+namespace Housing.Controllers
+{
+    [ApiController]
+    [Route("[controller]")]
+    public class AuthController : ControllerBase
+    {
+        public readonly IAuthService _authService;
+        public AuthController(IAuthService authService)
+        {
+            _authService = authService;
+        }
+
+        [HttpPost("register")]
+        public IActionResult Register(RegistrDto registrDto)
+        {
+            var result = _authService.Register(registrDto);
+            if (!result.IsSuccess)
+            {
+                return BadRequest(result);
+            }
+            return Ok(result);
+        }
+        [HttpPost("login")]
+        public IActionResult Login(LoginDto loginDto)
+        {
+            var result = _authService.Login(loginDto);
+            if (!result.IsSuccess)
+            {
+                return BadRequest(result);
+            }
+            return Ok(result);
+        }
+    }
+}
