@@ -21,5 +21,7 @@ namespace Housing.Models.DTOs
         public string ContactName { get; set; }
         public string ContactPhone { get; set; }
         public List<string> Photos { get; set; }
+        public List<int> AmenityIds { get; set; } = new List<int>();
+        //public List,,<
     }
 }

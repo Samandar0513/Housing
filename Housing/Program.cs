@@ -1,8 +1,11 @@
 
 using Housing.Context;
+using Housing.Models.DTOs.Comman;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using Minio;
 
 namespace Housing
 {
@@ -11,6 +14,7 @@ namespace Housing
         public static void Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
+            var configuration = builder.Configuration;
             builder.Services.AddDbContextPool<AppDbContext>(options =>
             {
                 options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"));
@@ -21,6 +25,30 @@ namespace Housing
             builder.Services.AddScoped<Services.Interfaces.IJwtTokenService, Services.JwtTokenService>();
             builder.Services.AddScoped<Services.Interfaces.IAuthService, Services.AuthService>();
             builder.Services.AddScoped<Services.Interfaces.IGeneralService, Services.GeneralService>();
+            builder.Services.AddScoped<Services.Interfaces.IPropertyService, Services.PropertyService>();
+
+            //Minio sozlamalari
+            builder.Services.AddScoped<Services.Interfaces.IFileStorageService, Services.MinioFileStorageService>();
+
+            builder.Services.Configure<MinioSettings>(configuration.GetSection("MinioSettings"));
+            builder.Services.AddSingleton<IMinioClient>(sp =>
+            {
+                var minioSettings = sp.GetRequiredService<IOptions<MinioSettings>>().Value;
+
+                // MinioClient obyektini yaratish
+                var client = new MinioClient()
+                    .WithEndpoint(minioSettings.Endpoint)
+                    .WithCredentials(minioSettings.AccessKey, minioSettings.SecretKey);
+
+                // Agar SSL yoqilgan bo'lsa
+                if (minioSettings.UseSsl)
+                {
+                    client = client.WithSSL();
+                }
+
+                return client.Build(); // MinioClient ni qurish
+            });
+
 
             //JWT Konfiguratsiyasi
             builder.Services.AddAuthentication(options =>
