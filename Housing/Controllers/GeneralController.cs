@@ -1,6 +1,7 @@
-using Housing.Models.DTOs;
-using Housing.Services.Interfaces;
+
+using BizLayer.Services.Interfaces;
 using Microsoft.AspNetCore.Mvc;
+
 
 namespace Housing.Controllers
 {

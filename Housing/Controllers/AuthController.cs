@@ -1,5 +1,5 @@
-using Housing.Models.DTOs;
-using Housing.Services.Interfaces;
+using BizLayer.DTOs;
+using BizLayer.Services.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Housing.Controllers

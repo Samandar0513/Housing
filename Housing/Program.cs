@@ -1,11 +1,13 @@
-
-using Housing.Context;
-using Housing.Models.DTOs.Comman;
+using BizLayer.Services.Interfaces;           
+using BizLayer.Services.Implementations;
+using DataAccess.Context;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Minio;
+using BizLayer.Services;
+using BizLayer.DTOs.Comman;
 
 namespace Housing
 {
@@ -21,14 +23,14 @@ namespace Housing
             });
             // Add services to the container.
             //DI Container
-            builder.Services.AddScoped<Services.Helper>();
-            builder.Services.AddScoped<Services.Interfaces.IJwtTokenService, Services.JwtTokenService>();
-            builder.Services.AddScoped<Services.Interfaces.IAuthService, Services.AuthService>();
-            builder.Services.AddScoped<Services.Interfaces.IGeneralService, Services.GeneralService>();
-            builder.Services.AddScoped<Services.Interfaces.IPropertyService, Services.PropertyService>();
+            builder.Services.AddScoped<Helper>();
+            builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
+            builder.Services.AddScoped<IAuthService, AuthService>();
+            builder.Services.AddScoped<IGeneralService, GeneralService>();
+            builder.Services.AddScoped<IPropertyService, PropertyService>();
 
             //Minio sozlamalari
-            builder.Services.AddScoped<Services.Interfaces.IFileStorageService, Services.MinioFileStorageService>();
+            builder.Services.AddScoped<BizLayer.Services.Interfaces.IFileStorageService, MinioFileStorageService>();
 
             builder.Services.Configure<MinioSettings>(configuration.GetSection("MinioSettings"));
             builder.Services.AddSingleton<IMinioClient>(sp =>
