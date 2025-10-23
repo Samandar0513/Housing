@@ -8,6 +8,12 @@ using Microsoft.OpenApi.Models;
 using Minio;
 using BizLayer.Services;
 using BizLayer.DTOs.Comman;
+using DataAccess;
+using BizLayer;
+using FluentValidation.AspNetCore;
+using FluentValidation;
+using BizLayer.DTOs.Validators;
+using BizLayer.DTOs;
 
 namespace Housing
 {
@@ -17,20 +23,28 @@ namespace Housing
         {
             var builder = WebApplication.CreateBuilder(args);
             var configuration = builder.Configuration;
-            builder.Services.AddDbContextPool<AppDbContext>(options =>
+
+            builder.Services.AddControllers();
+            builder.Services.AddFluentValidationAutoValidation();
+            builder.Services.AddValidatorsFromAssemblyContaining<RegistrDtoValidator>();
+
+            builder.Services.AddDataAccess(configuration);
+            /**builder.Services.AddDbContextPool<AppDbContext>(options =>
             {
                 options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection"));
-            });
+            });**/
             // Add services to the container.
             //DI Container
-            builder.Services.AddScoped<Helper>();
+            builder.Services.AddBizLayer(configuration);
+            //builder.Services.Configure<JwtOption>(configuration.GetSection("JwtOption"));
+            /**builder.Services.AddScoped<Helper>();
             builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
             builder.Services.AddScoped<IAuthService, AuthService>();
             builder.Services.AddScoped<IGeneralService, GeneralService>();
-            builder.Services.AddScoped<IPropertyService, PropertyService>();
+            builder.Services.AddScoped<IPropertyService, PropertyService>();**/
 
-            //Minio sozlamalari
-            builder.Services.AddScoped<BizLayer.Services.Interfaces.IFileStorageService, MinioFileStorageService>();
+            ///Minio sozlamalari ---->  AddBizLayer ichiga ko'chirildi
+            /**builder.Services.AddScoped<IFileStorageService, MinioFileStorageService>();
 
             builder.Services.Configure<MinioSettings>(configuration.GetSection("MinioSettings"));
             builder.Services.AddSingleton<IMinioClient>(sp =>
@@ -41,19 +55,17 @@ namespace Housing
                 var client = new MinioClient()
                     .WithEndpoint(minioSettings.Endpoint)
                     .WithCredentials(minioSettings.AccessKey, minioSettings.SecretKey);
-
                 // Agar SSL yoqilgan bo'lsa
                 if (minioSettings.UseSsl)
                 {
                     client = client.WithSSL();
                 }
-
                 return client.Build(); // MinioClient ni qurish
-            });
+            });**/
 
 
-            //JWT Konfiguratsiyasi
-            builder.Services.AddAuthentication(options =>
+            //JWT Konfiguratsiyasi ---->  AddBizLayer ichiga ko'chirildi
+            /**builder.Services.AddAuthentication(options =>
             {
                 options.DefaultAuthenticateScheme = "JwtBearer";
                 options.DefaultChallengeScheme = "JwtBearer";
@@ -74,9 +86,7 @@ namespace Housing
                     )
                 };
             });
-            builder.Services.AddAuthorization();
-
-            builder.Services.AddControllers();
+            builder.Services.AddAuthorization();**/
             // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
             builder.Services.AddEndpointsApiExplorer();
             //builder.Services.AddSwaggerGen();

@@ -17,6 +17,13 @@ namespace Housing.Controllers
         [HttpPost("register")]
         public IActionResult Register(RegistrDto registrDto)
         {
+            if(!ModelState.IsValid)
+            {
+                IEnumerable<string> errors = ModelState.Values
+                    .SelectMany(v => v.Errors)
+                    .Select(e => e.ErrorMessage);
+                return BadRequest(errors);
+            }
             var result = _authService.Register(registrDto);
             if (!result.IsSuccess)
             {

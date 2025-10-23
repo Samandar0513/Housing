@@ -14,9 +14,12 @@ namespace BizLayer.Services.Implementations
     public class PropertyService : IPropertyService
     {
         private readonly AppDbContext db;
-        public PropertyService(AppDbContext context)
+        private readonly IFileStorageService _fileStorage;
+        private const string PROPERTY_BUCKET = "property-images";
+        public PropertyService(AppDbContext context, IFileStorageService fileStorage)
         {
             db = context;
+            _fileStorage = fileStorage;
         }
         public int InsertProperty(int userId, PropertyInsertDto insertPropertyDto)
         {
@@ -38,26 +41,50 @@ namespace BizLayer.Services.Implementations
                 ContactPhone = insertPropertyDto.ContactPhone,
                 ViewsCount = 0,
                 CreatedAt = DateTime.UtcNow,
-                Photos = insertPropertyDto.Photos.Select(photoPath => new PropertyPhoto
-                {
-                    FilePath = photoPath
-                }).ToList()
+                //Photos = insertPropertyDto.Photos.Select(photoPath => new PropertyPhoto
+                //{
+                //    FilePath = photoPath
+                //}).ToList()
+
+                //// ✅ Navigation property'lar orqali qo'shish
+                //Photos = insertPropertyDto.Photos?.Select(photoUrl => new PropertyPhoto
+                //{
+                //    FilePath = photoUrl
+                //}).ToList() ?? new List<PropertyPhoto>(),
+
+                //PropertyAmenities = insertPropertyDto.AmenityIds?.Select(amenityId => new PropertyAmenity
+                //{
+                //    AmenityId = amenityId
+                //}).ToList() ?? new List<PropertyAmenity>()
             };
             db.Properties.Add(property);
             db.SaveChanges();
+            // 2. Photos qo'shish
+            if (insertPropertyDto.Photos != null && insertPropertyDto.Photos.Any())
+            {
+                var photos = insertPropertyDto.Photos.Select(photoUrl => new PropertyPhoto
+                {
+                    PropertyId = property.Id,
+                    FilePath = photoUrl,
+                    CreatedAt = DateTime.UtcNow
+                }).ToList();
 
+                db.PropertyPhotos.AddRange(photos); // ✅ AddRange - tezroq
+            }
+
+            // 3. Amenities qo'shish
             if (insertPropertyDto.AmenityIds != null && insertPropertyDto.AmenityIds.Any())
             {
-                foreach (var amenityId in insertPropertyDto.AmenityIds)
+                var amenities = insertPropertyDto.AmenityIds.Select(amenityId => new PropertyAmenity
                 {
-                    db.PropertyAmenities.Add(new PropertyAmenity
-                    {
-                        PropertyId = property.Id,
-                        AmenityId = amenityId
-                    });
-                }
-                db.SaveChanges();
+                    PropertyId = property.Id,
+                    AmenityId = amenityId
+                }).ToList();
+
+                db.PropertyAmenities.AddRange(amenities); // ✅ AddRange - tezroq
             }
+
+            db.SaveChanges(); // ✅ Faqat bir marta save
             return property.Id;
         }
         public List<PropertyDto> GetAllProperties(int pageNumber, int count)
@@ -110,6 +137,7 @@ namespace BizLayer.Services.Implementations
 
             if (property == null) return null;
             property.ViewsCount += 1;
+            db.SaveChanges();
             return new PropertyDto
             {
                 Id = property.Id,
@@ -158,17 +186,37 @@ namespace BizLayer.Services.Implementations
 
             if (updatePropertyDto.Photos != null)
             {
-                var oldPhotos = property.Photos.ToList();
-                db.PropertyPhotos.RemoveRange(oldPhotos);
+                //var oldPhotos = property.Photos.ToList();
+                //db.PropertyPhotos.RemoveRange(oldPhotos);
 
-                foreach (var photoPath in updatePropertyDto.Photos)
-                {
-                    property.Photos.Add(new PropertyPhoto
+                //foreach (var photoPath in updatePropertyDto.Photos)
+                //{
+                //    property.Photos.Add(new PropertyPhoto
+                //    {
+                //        FilePath = photoPath,
+                //        CreatedAt = DateTime.UtcNow
+                //    });
+                //}
+                var oldPhotos = db.PropertyPhotos
+                    .Where(p => p.PropertyId == propertyId)
+                    .ToList();
+                var newPhotos = updatePropertyDto.Photos
+                    .Select(p => new PropertyPhoto
                     {
-                        FilePath = photoPath,
-                        CreatedAt = DateTime.UtcNow
-                    });
-                }
+                        FilePath = p,
+                        CreatedAt = DateTime.UtcNow,
+                        PropertyId = propertyId
+                    }).ToList();
+                var photosToRemove = oldPhotos
+                    .Where(op => !newPhotos.Any(np => np.FilePath == op.FilePath))
+                    .ToList();
+                var photosToAdd = newPhotos
+                    .Where(np => !oldPhotos.Any(op => op.FilePath == np.FilePath))
+                    .ToList();
+
+                db.PropertyPhotos.RemoveRange(photosToRemove);
+                db.PropertyPhotos.AddRange(photosToAdd);
+                db.SaveChanges();
             }
 
             if (updatePropertyDto.AmenityIds != null)
@@ -193,6 +241,21 @@ namespace BizLayer.Services.Implementations
         {
             var property = db.Properties.FirstOrDefault(p => p.Id == propertyId);
             if (property == null) return false;
+            // ✅ Rasmlarni Minio'dan o'chirish
+            foreach (var photo in property.Photos)
+            {
+                try
+                {
+                    var uri = new Uri(photo.FilePath);
+                    var objectName = uri.Segments[uri.Segments.Length - 1];
+                    _fileStorage.RemoveFileAsync(PROPERTY_BUCKET, objectName).Wait();
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Rasmni o'chirishda xatolik: {ex.Message}");
+                }
+            }
+
             db.Properties.Remove(property);
             db.SaveChanges();
             return true;
